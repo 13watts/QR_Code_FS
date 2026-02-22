@@ -14,7 +14,7 @@ The goal: validate end‑to‑end **data survivability** through a physical proc
 
 1) digital payload → 2) QR tiles → 3) slide layout → 4) vector export → 5) nano lithography → 6) imaging → 7) decode → 8) file rehydration + hash verification
 
-If this works, it’s a path toward **glass‑written, machine‑readable, long‑life storage experiments** (and a nice way to make your storage admin friends uncomfortable).
+If this works, it’s a path toward **nano‑written, machine‑readable, long‑life storage experiments** (and a nice way to make your storage admin friends uncomfortable).
 
 ---
 
