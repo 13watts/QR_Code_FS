@@ -1,6 +1,6 @@
 # QRFS Nanometer Slide Experiment
 
-A practical experiment in turning files into **QR mosaics** designed for **nanometer‑scale lithography on glass**.
+A practical experiment in turning files into **QR mosaics** designed for **nanometer‑scale lithography**.
 
 This repo is *not* “QR codes for your coffee shop menu.” It’s a pipeline to test whether we can reliably **write** and later **read** dense QR payloads when the “pixels” are measured in **nanometers**, using lithography workflows and scanners/cameras downstream.
 
