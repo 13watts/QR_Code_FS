@@ -12,7 +12,7 @@ We generate **QR Code Version 40** tiles (configurable ECC), pack them onto a **
 
 The goal: validate end‑to‑end **data survivability** through a physical process:
 
-1) digital payload → 2) QR tiles → 3) slide layout → 4) vector export → 5) lithography on glass → 6) imaging → 7) decode → 8) file rehydration + hash verification
+1) digital payload → 2) QR tiles → 3) slide layout → 4) vector export → 5) nano lithography → 6) imaging → 7) decode → 8) file rehydration + hash verification
 
 If this works, it’s a path toward **glass‑written, machine‑readable, long‑life storage experiments** (and a nice way to make your storage admin friends uncomfortable).
 
@@ -82,7 +82,7 @@ Rebuilds original file(s) from slide artifacts:
 
 ---
 
-## Quickstart (Windows)
+## Quickstart 
 
 ### Install Python deps
 Use the OS‑specific requirements files:
