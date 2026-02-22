@@ -1,0 +1,99 @@
+.TH CREATE_SLIDE_QRFS_V3 1 "2026-02-21" "QRFS" "User Commands"
+.SH NAME
+create_slide_qrfs_v3.py \- pack QRFS bundle tiles onto lithography-ready slides and emit SVG/JSON (and optional proof PNG).
+.SH SYNOPSIS
+.B py -u create_slide_qrfs_v3.py
+.I --src PATH --out PATH
+[\fB--pixel-nm\fR NM] [\fB--module-pixels\fR N] [\fB--quiet-modules\fR N] [\fB--slide-mm\fR MM]
+[\fB--stripe-k\fR K] [\fB--reserve-corners\fR] [\fB--proof-px\fR PX]
+[\fB--embed-manifest\fR] [\fB--marker-ecc\fR {L|M|Q|H}] [\fB--marker-version\fR N]
+[\fB--progress-mode\fR {auto|bar|simple}] [\fB--progress-stream\fR {stdout|stderr}] [\fB--no-progress\fR]
+[\fB--verify\fR] [\fB--max-depth\fR N]
+.SH DESCRIPTION
+Searches for one or more *.qrfs directories under --src (recursively), then packs QR tiles row-by-row onto one or more slides of size --slide-mm × --slide-mm. Output is a slide SVG (preferred for lithography workflows) and a JSON sidecar that records layout parameters.
+.SH LAYOUT
+Tiles are placed in deterministic order. Typical ordering per file is:
+.IP 1. 3
+slide initialization marker (UUID)
+.IP 2.
+file start marker (source path)
+.IP 3.
+header_main.qr, header_stat.qr
+.IP 4.
+data blocks block_######.qr, grouped by stripe-k with parity blocks
+.IP 5.
+footer markers
+.IP 6.
+file close marker (UUID)
+.PP
+If additional files fit, the sequence repeats; otherwise a new slide is started.
+.SH OPTIONS
+.TP
+.B --src PATH
+Input directory (or .zip) containing one or more *.qrfs dirs (recursive search).
+.TP
+.B --out PATH
+Output directory (default: slides_out).
+.TP
+.B --pixel-nm NM
+Lithography pixel size in nanometers (default: 1500).
+.TP
+.B --module-pixels N
+Pixels per QR module (default: 1).
+.TP
+.B --quiet-modules N
+Quiet zone in modules (default: 4).
+.TP
+.B --slide-mm MM
+Slide width/height in millimeters (default: 93).
+.TP
+.B --reserve-corners
+Leave four corners empty (not used for tiles).
+.TP
+.B --proof-px PX
+Proof PNG side in pixels (default: 8192; only if Pillow is installed).
+.TP
+.B --stripe-k K
+Stripe K (blocks per stripe) used for parity ordering (default: 16).
+.TP
+.B --max-depth N
+Directory recursion limit when searching for *.qrfs dirs (0 = unlimited).
+.TP
+.B --embed-manifest
+Embed manifest.json as marker QR chunk(s) at end of a file (base64).
+.TP
+.B --marker-ecc {L|M|Q|H}
+ECC for marker QRs (default: H).
+.TP
+.B --marker-version N
+QR version for marker QRs (default: 40).
+.TP
+.B --progress-mode {auto|bar|simple}
+Progress display mode (default: auto).
+.TP
+.B --progress-stream {stdout|stderr}
+Where progress is printed (default: stderr).
+.TP
+.B --no-progress
+Disable progress output.
+.TP
+.B --verify
+Decode a small sample of output tiles to sanity-check output.
+.TP
+.B --version
+Print version and exit.
+.SH OUTPUT
+For each generated slide:
+.IP \[bu] 2
+slide_00001.svg (tile layout)
+.IP \[bu] 2
+slide_00001.json (grid metadata)
+.IP \[bu] 2
+proof_00001.png (optional)
+.SH EXAMPLES
+.nf
+py -u create_slide_qrfs_v3.py --src Z:\\qrfs_out --out Z:\\slide_out --progress-mode bar --verify
+py -u create_slide_qrfs_v3.py --src ./qrfs_out --out ./slide_out --pixel-nm 1500 --module-pixels 1 --quiet-modules 4
+.fi
+.SH SEE ALSO
+qrfs_cli_ecc_lmh.py(1), slice_slide_2x2_v2.py(1), rebuild_from_slide_v3.py(1)

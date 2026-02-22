@@ -1,0 +1,72 @@
+.TH QRFS_CLI_ECC_LMH 1 "2026-02-21" "QRFS" "User Commands"
+.SH NAME
+qrfs_cli_ecc_lmh.py \- encode files/directories into QRFS bundles using QR version 40 with selectable ECC.
+.SH SYNOPSIS
+.B py -u qrfs_cli_ecc_lmh.py
+.I --src PATH --out PATH
+[\fB--block-size\fR N] [\fB--threads\fR N] [\fB--ecc\fR {L|M|H}] [\fB--version\fR 40]
+[\fB--hex-mode\fR {derived|inline}] [\fB--box-size\fR N] [\fB--border\fR N]
+[\fB--png-compress-level\fR 0..9] [\fB--no-parity] [\fB--no-fit-fallback]
+.SH DESCRIPTION
+Creates a QRFS bundle directory for each input file (ending with .qrfs). Bundles contain header QR codes, a sequence of data block QR codes, optional parity QR codes, and footer markers. Each data block payload contains identifiers, ordering metadata, an embedded SHA-256 for the block, and the block bytes.
+.SH OPTIONS
+.TP
+.B --src PATH
+Input file or directory to ingest (directories are walked recursively).
+.TP
+.B --out PATH
+Output directory. Source tree structure is mirrored under this directory.
+.TP
+.B --block-size N
+Data block size in bytes (default: 1024).
+.TP
+.B --threads N
+Concurrent files to process (default: 8).
+.TP
+.B --ecc, --ecc-mode, --ecc-level {L|M|H}
+QR error correction level (default: H).
+.TP
+.B --version N
+QR version (default: 40).
+.TP
+.B --hex-mode {derived|inline}
+How payload bytes are represented. Use derived/raw when maximizing capacity; inline hex reduces effective capacity.
+.TP
+.B --log-level LEVEL
+Log level (DEBUG, INFO, WARNING, ERROR). Default: DEBUG.
+.TP
+.B --box-size N
+Pixel size per QR module when rendering PNGs (default: 3).
+.TP
+.B --border N
+Quiet zone border in modules (default: 4).
+.TP
+.B --png-compress-level N
+PNG zlib compression level 0..9 (default: 4).
+.TP
+.B --no-parity
+Disable parity QR generation.
+.TP
+.B --no-fit-fallback
+Disable fallback resizing if a payload does not fit the selected version/ECC.
+.SH OUTPUT
+For each file, a directory named <filename>.qrfs is created containing:
+.IP \[bu] 2
+header_main.qr, header_stat.qr
+.IP \[bu] 2
+block_000000.qr ... block_NNNNNN.qr
+.IP \[bu] 2
+(optional) parity_stripe_XXXXXX_pY.qr
+.IP \[bu] 2
+(optional) footer QR markers
+.SH EXAMPLES
+.nf
+py -u qrfs_cli_ecc_lmh.py --src Z:\\data\\photos --out Z:\\qrfs_out --block-size 1024 --ecc H --hex-mode derived
+py -u qrfs_cli_ecc_lmh.py --src ./input --out ./qrfs_out --ecc L --no-parity
+.fi
+.SH NOTES
+On Windows, QR PNG generation typically requires Pillow. Install with: pip install pillow (or qrcode[pil]).
+.SH EXIT STATUS
+0 on success; non-zero on failure.
+.SH SEE ALSO
+create_slide_qrfs_v3.py(1), slice_slide_2x2_v2.py(1), rebuild_from_slide_v3.py(1)

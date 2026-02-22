@@ -1,0 +1,33 @@
+# QRFS toolchain requirements (macOS)
+# Covers: qrfs_cli_ecc_lmh.py, create_slide_qrfs_v3.py, slice_slide_2x2_v2.py, rebuild_from_slide_v3.py
+#
+# System packages you likely need:
+#   brew install zbar cairo
+
+Pillow>=10.0
+numpy>=1.24
+tqdm>=4.66
+
+# QR generation
+qrcode>=7.4
+qrcodegen>=1.8
+segno>=1.6
+
+# Erasure coding
+reedsolo>=1.7
+
+# Decoders
+opencv-python>=4.8
+pyzbar>=0.1.9
+
+# Vector/PDF exporters
+cairosvg>=2.7
+svglib>=1.5
+reportlab>=4.0
+
+# Lithography formats
+gdstk>=0.9
+gdspy>=1.6
+
+# PDF input support
+pymupdf>=1.23

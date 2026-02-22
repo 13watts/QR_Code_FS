@@ -1,0 +1,61 @@
+.TH SLICE_SLIDE_2X2_V2 1 "2026-02-21" "QRFS" "User Commands"
+.SH NAME
+slice_slide_2x2_v2.py \- slice a full slide SVG into 2×2 QR panes, with optional PDF/GDSII/OASIS export.
+.SH SYNOPSIS
+.B py -u slice_slide_2x2_v2.py
+.I --svg SLIDE.svg --out DIR
+[\fB--prefix\fR NAME] [\fB--start\fR N] [\fB--pad\fR N] [\fB--manifest\fR] [\fB--max\fR N]
+[\fB--pdf\fR] [\fB--gds\fR] [\fB--oas\fR]
+[\fB--quiet-modules\fR N] [\fB--gds-layer\fR N] [\fB--gds-datatype\fR N] [\fB--gds-threshold\fR N]
+.SH DESCRIPTION
+Takes a full slide SVG produced by create_slide_qrfs_v3.py and slices it into pane SVGs where each pane contains a 2×2 grid of QR tiles. This is useful for writer workflows that accept small repeated patterns.
+.SH OPTIONS
+.TP
+.B --svg PATH
+Input full slide SVG.
+.TP
+.B --out DIR
+Output directory for 2×2 panes.
+.TP
+.B --prefix NAME
+Output filename prefix (default: input stem).
+.TP
+.B --start N
+Starting sequence number (default: 1).
+.TP
+.B --pad N
+Zero-pad width for sequence numbers (default: 8).
+.TP
+.B --manifest
+Write manifest JSON mapping pane sequence → original slide grid coordinates.
+.TP
+.B --max N
+Optional: limit number of panes (for testing).
+.TP
+.B --pdf
+Also export each pane as PDF (requires CairoSVG or svglib+reportlab).
+.TP
+.B --gds
+Also export each pane as GDSII (vector modules; requires gdstk).
+.TP
+.B --oas
+Also export each pane as OASIS (vector modules; requires gdstk).
+.TP
+.B --quiet-modules N
+Quiet zone modules (default: 4; must match tile generation).
+.TP
+.B --gds-layer N
+Layer number for black modules (default: 1).
+.TP
+.B --gds-datatype N
+Datatype for black modules (default: 0).
+.TP
+.B --gds-threshold N
+Pixel threshold 0..255 used when raster→module classification is needed (default: 128).
+.SH EXAMPLES
+.nf
+py -u slice_slide_2x2_v2.py --svg Z:\\slide_out\\slide_00001.svg --out Z:\\panes --manifest
+py -u slice_slide_2x2_v2.py --svg slide_00001.svg --out panes --pdf --gds --oas
+.fi
+.SH SEE ALSO
+create_slide_qrfs_v3.py(1), rebuild_from_slide_v3.py(1)
