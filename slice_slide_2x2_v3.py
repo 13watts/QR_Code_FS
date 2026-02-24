@@ -10,6 +10,7 @@ Outputs (per pane, row-major):
 - Optional: <out>/<prefix>_2x2_<seq>.pdf      (if --pdf)
 - Optional: <out>/<prefix>_2x2_<seq>.gds      (if --gds)
 - Optional: <out>/<prefix>_2x2_<seq>.oas      (if --oas)
+- Optional: <out>/<prefix>_2x2_<seq>.png      (PNG preview default 1920×1080; disable with --no-png)
 - Optional manifest JSON mapping each seq -> original grid position + slide coordinates (+ output filenames).
 
 Notes
@@ -35,6 +36,7 @@ from typing import Dict, Tuple, List, Optional
 # ---- Optional deps ----
 _HAVE_PIL = False
 _HAVE_OPENCV = False
+_HAVE_NUMPY = False
 _HAVE_CAIROSVG = False
 _HAVE_SVGLIB = False
 _HAVE_REPORTLAB = False
@@ -52,6 +54,13 @@ try:
     _HAVE_OPENCV = True
 except Exception:
     cv2 = None  # type: ignore
+
+try:
+    import numpy as np  # type: ignore
+    _HAVE_NUMPY = True
+except Exception:
+    np = None  # type: ignore
+    _HAVE_NUMPY = False
 
 try:
     import cairosvg  # type: ignore
@@ -438,6 +447,163 @@ def export_gds_oas_for_pane(out_path: Path, kind: str, pane_name: str, size_mm: 
     lib.write_gds(str(out_path))  # type: ignore
 
 
+
+
+# ---- PNG preview export (1920×1080 default) ----
+
+def _load_tile_rgb_bytes(path: Path) -> Optional[bytes]:
+    try:
+        return path.read_bytes()
+    except Exception:
+        return None
+
+
+def _decode_image_rgb(data: bytes):
+    """
+    Return an RGB image as either PIL.Image or numpy array, depending on what's available.
+    We deliberately sniff by content bytes so files with a .qr extension (PNG-in-disguise) still work.
+    """
+    # Prefer PIL if available.
+    if _HAVE_PIL:
+        try:
+            import io as _io
+            im = Image.open(_io.BytesIO(data)).convert("RGB")  # type: ignore
+            return ("pil", im)
+        except Exception:
+            pass
+
+    # Fallback to OpenCV
+    if _HAVE_OPENCV and _HAVE_NUMPY:
+        try:
+            arr = np.frombuffer(data, dtype=np.uint8)  # type: ignore
+            bgr = cv2.imdecode(arr, cv2.IMREAD_COLOR)  # type: ignore
+            if bgr is None:
+                return None
+            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)  # type: ignore
+            return ("cv", rgb)
+        except Exception:
+            return None
+
+    return None
+
+
+def export_png_preview(
+    out_png: Path,
+    hrefs: List[Optional[str]],
+    base_dir: Path,
+    width_px: int = 1920,
+    height_px: int = 1080,
+) -> None:
+    """
+    Write a human-viewable PNG preview for a 2×2 pane at a fixed resolution (default 1920×1080).
+
+    Strategy:
+    - Decode the 4 tile images (they may be .png or .qr extension with PNG bytes)
+    - Compose a 2×2 mosaic (square)
+    - Scale mosaic to fit inside min(width,height) using nearest-neighbor (keeps module edges crisp)
+    - Letterbox/pillarbox onto a white 1920×1080 canvas
+    """
+    if not (_HAVE_PIL or (_HAVE_OPENCV and _HAVE_NUMPY)):
+        die("PNG preview requested but neither Pillow nor (OpenCV+NumPy) is available.")
+
+    # Resolve paths and decode tiles
+    tiles = []
+    for href in hrefs:
+        if not href:
+            tiles.append(None)
+            continue
+        p = resolve_href(href, base_dir)
+        data = _load_tile_rgb_bytes(p)
+        if not data:
+            tiles.append(None)
+            continue
+        dec = _decode_image_rgb(data)
+        tiles.append(dec)
+
+    # Find first real tile size
+    tile_w = tile_h = None
+    for t in tiles:
+        if not t:
+            continue
+        kind, obj = t
+        if kind == "pil":
+            tile_w, tile_h = obj.size  # type: ignore
+        else:
+            tile_h, tile_w = obj.shape[:2]  # type: ignore
+        break
+
+    if tile_w is None or tile_h is None:
+        die(f"PNG preview: no decodable tiles for pane {out_png.name}")
+
+    # Compose mosaic as numpy RGB
+    if _HAVE_NUMPY:
+        canvas = np.full((tile_h * 2, tile_w * 2, 3), 255, dtype=np.uint8)  # type: ignore
+        positions = [(0, 0), (0, tile_w), (tile_h, 0), (tile_h, tile_w)]
+        for i, t in enumerate(tiles):
+            if not t:
+                continue
+            kind, obj = t
+            if kind == "pil":
+                arr = np.array(obj, dtype=np.uint8)  # type: ignore
+            else:
+                arr = obj  # type: ignore
+            y, x = positions[i]
+            # Guard against mismatched sizes
+            if arr.shape[0] != tile_h or arr.shape[1] != tile_w:
+                if _HAVE_OPENCV:
+                    arr = cv2.resize(arr, (tile_w, tile_h), interpolation=cv2.INTER_NEAREST)  # type: ignore
+                else:
+                    # PIL-only fallback
+                    arr = np.array(obj.resize((tile_w, tile_h), resample=0), dtype=np.uint8)  # type: ignore
+            canvas[y:y + tile_h, x:x + tile_w, :] = arr
+
+        # Resize mosaic to square
+        square = min(width_px, height_px)
+        if _HAVE_OPENCV:
+            mosaic = cv2.resize(canvas, (square, square), interpolation=cv2.INTER_NEAREST)  # type: ignore
+        else:
+            # PIL path without cv2
+            from PIL import Image as _PILImage  # type: ignore
+            mosaic = np.array(_PILImage.fromarray(canvas).resize((square, square), resample=0), dtype=np.uint8)  # type: ignore
+
+        # Letterbox/pillarbox into final canvas
+        final = np.full((height_px, width_px, 3), 255, dtype=np.uint8)  # type: ignore
+        ox = max(0, (width_px - square) // 2)
+        oy = max(0, (height_px - square) // 2)
+        final[oy:oy + square, ox:ox + square, :] = mosaic
+
+        # Write PNG
+        out_png.parent.mkdir(parents=True, exist_ok=True)
+        if _HAVE_OPENCV:
+            bgr = cv2.cvtColor(final, cv2.COLOR_RGB2BGR)  # type: ignore
+            cv2.imwrite(str(out_png), bgr)  # type: ignore
+        else:
+            from PIL import Image as _PILImage  # type: ignore
+            _PILImage.fromarray(final).save(str(out_png), format="PNG")
+        return
+
+    # Extreme fallback: PIL without numpy (rare). Do a PIL-only composite.
+    if _HAVE_PIL:
+        from PIL import Image as _PILImage  # type: ignore
+        pane = _PILImage.new("RGB", (tile_w * 2, tile_h * 2), (255, 255, 255))
+        positions = [(0, 0), (tile_w, 0), (0, tile_h), (tile_w, tile_h)]
+        for i, t in enumerate(tiles):
+            if not t:
+                continue
+            kind, obj = t
+            im = obj if kind == "pil" else _PILImage.fromarray(obj)  # type: ignore
+            if im.size != (tile_w, tile_h):
+                im = im.resize((tile_w, tile_h), resample=_PILImage.NEAREST)
+            pane.paste(im, positions[i])
+        square = min(width_px, height_px)
+        pane2 = pane.resize((square, square), resample=_PILImage.NEAREST)
+        out = _PILImage.new("RGB", (width_px, height_px), (255, 255, 255))
+        ox = max(0, (width_px - square) // 2)
+        oy = max(0, (height_px - square) // 2)
+        out.paste(pane2, (ox, oy))
+        out_png.parent.mkdir(parents=True, exist_ok=True)
+        out.save(str(out_png), format="PNG")
+        return
 def main():
     ap = argparse.ArgumentParser(description="Split a slide SVG into 2×2 mini panes (SVG + optional PDF/GDS/OAS).")
     ap.add_argument("--svg", required=True, help="Input full slide SVG")
@@ -449,6 +615,10 @@ def main():
     ap.add_argument("--max", type=int, default=0, help="Optional: limit number of panes (for testing)")
 
     # Extra formats
+    ap.add_argument("--no-png", action="store_true", help="Disable PNG preview export (PNG preview is on by default).")
+    ap.add_argument("--png-width", type=int, default=1920, help="PNG preview width in pixels (default 1920).")
+    ap.add_argument("--png-height", type=int, default=1080, help="PNG preview height in pixels (default 1080).")
+
     ap.add_argument("--pdf", action="store_true", help="Also export each pane as a PDF.")
     ap.add_argument("--gds", action="store_true", help="Also export each pane as GDSII (vector modules).")
     ap.add_argument("--oas", action="store_true", help="Also export each pane as OASIS (vector modules).")
@@ -532,7 +702,13 @@ def main():
             out_svg = out_dir / svg_name
             write_chunk_svg(out_svg, qr_mm, hrefs)
 
-            pdf_name = gds_name = oas_name = None
+            png_name = pdf_name = gds_name = oas_name = None
+
+            # PNG preview export
+            if not args.no_png:
+                out_png = out_dir / f"{stem}.png"
+                export_png_preview(out_png, hrefs, base_dir=base_dir, width_px=args.png_width, height_px=args.png_height)
+                png_name = out_png.name
 
             # PDF export
             if args.pdf:
@@ -568,6 +744,7 @@ def main():
                         "seq": seq,
                         "stem": stem,
                         "svg": svg_name,
+                        "png": png_name,
                         "pdf": pdf_name,
                         "gds": gds_name,
                         "oas": oas_name,

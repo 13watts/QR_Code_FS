@@ -2,28 +2,32 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>slice_slide_2x2_v2(1)</title>
+<title>slice_slide_2x2_v3(1)</title>
 <style>
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;line-height:1.35}
 pre{background:#f6f8fa;padding:16px;border-radius:10px;overflow:auto}
 h1{margin:0 0 12px 0}
 .small{color:#555}
+a{color:#0b57d0;text-decoration:none} a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
-<h1>slice_slide_2x2_v2(1)</h1>
+<h1>slice_slide_2x2_v3(1)</h1>
 <div class="small">Generated 2026-02-21</div>
-<pre>.TH SLICE_SLIDE_2X2_V2 1 "2026-02-21" "QRFS" "User Commands"
+<pre>.TH SLICE_SLIDE_2X2_V3 1 "2026-02-21" "QRFS" "User Commands"
 .SH NAME
-slice_slide_2x2_v2.py \- slice a full slide SVG into 2×2 QR panes, with optional PDF/GDSII/OASIS export.
+slice_slide_2x2_v3.py \- slice a slide SVG into 2×2 QR panes and emit 1920×1080 PNG previews (plus optional PDF/GDSII/OASIS).
 .SH SYNOPSIS
-.B py -u slice_slide_2x2_v2.py
+.B py -u slice_slide_2x2_v3.py
 .I --svg SLIDE.svg --out DIR
 [\fB--prefix\fR NAME] [\fB--start\fR N] [\fB--pad\fR N] [\fB--manifest\fR] [\fB--max\fR N]
 [\fB--pdf\fR] [\fB--gds\fR] [\fB--oas\fR]
+[\fB--png\fR] [\fB--no-png\fR] [\fB--png-width\fR W] [\fB--png-height\fR H]
 [\fB--quiet-modules\fR N] [\fB--gds-layer\fR N] [\fB--gds-datatype\fR N] [\fB--gds-threshold\fR N]
 .SH DESCRIPTION
-Takes a full slide SVG produced by create_slide_qrfs_v3.py and slices it into pane SVGs where each pane contains a 2×2 grid of QR tiles. This is useful for writer workflows that accept small repeated patterns.
+Takes a full slide SVG produced by create_slide_qrfs_v3.py and slices it into pane SVGs where each pane contains a 2×2 grid of QR tiles. This version also emits a raster preview PNG for each pane at a target screen resolution (default 1920×1080) so humans can inspect panes without specialized vector tooling.
+.SH PNG PREVIEW
+The preview PNG is letterboxed: the pane is centered and scaled uniformly to preserve QR aspect ratio. This avoids module distortion that would reduce readability.
 .SH OPTIONS
 .TP
 .B --svg PATH
@@ -56,6 +60,18 @@ Also export each pane as GDSII (vector modules; requires gdstk).
 .B --oas
 Also export each pane as OASIS (vector modules; requires gdstk).
 .TP
+.B --png
+Enable PNG preview output (default: enabled).
+.TP
+.B --no-png
+Disable PNG preview output.
+.TP
+.B --png-width W
+PNG preview width in pixels (default: 1920).
+.TP
+.B --png-height H
+PNG preview height in pixels (default: 1080).
+.TP
 .B --quiet-modules N
 Quiet zone modules (default: 4; must match tile generation).
 .TP
@@ -67,13 +83,15 @@ Datatype for black modules (default: 0).
 .TP
 .B --gds-threshold N
 Pixel threshold 0..255 used when raster→module classification is needed (default: 128).
+.SH DEPENDENCIES
+PNG preview output requires either OpenCV (opencv-python) or Pillow. PDF export may require CairoSVG (and Cairo runtime).
 .SH EXAMPLES
 .nf
-py -u slice_slide_2x2_v2.py --svg Z:\\slide_out\\slide_00001.svg --out Z:\\panes --manifest
-py -u slice_slide_2x2_v2.py --svg slide_00001.svg --out panes --pdf --gds --oas
+py -u slice_slide_2x2_v3.py --svg Z:\\slide_out\\slide_00001.svg --out Z:\\panes --manifest
+py -u slice_slide_2x2_v3.py --svg slide_00001.svg --out panes --no-png --pdf --gds --oas
 .fi
 .SH SEE ALSO
-create_slide_qrfs_v3.py(1), rebuild_from_slide_v3.py(1)
+create_slide_qrfs_v3.py(1), rebuild_from_slide_v3.py(1), magnify_pane.py(1)
 </pre>
 </body>
 </html>
