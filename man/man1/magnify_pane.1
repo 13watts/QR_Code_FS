@@ -1,25 +1,37 @@
 .TH MAGNIFY_PANE 1 "2026-02-21" "QRFS" "User Commands"
 .SH NAME
-magnify_pane.py \- create a local pan/zoom HTML magnifier for a 2×2 QR pane (SVG or PNG).
+magnify_pane_v3.py \- create a local pan/zoom HTML magnifier for QRFS artifacts (SVG or PNG) with auto-fit and zoom boost.
 .SH SYNOPSIS
-.B py -u magnify_pane.py
-.I --in PANE.(svg|png) --out DIR
-[\fB--name\fR BASE] [\fB--init-scale\fR S] [\fB--render-png\fR] [\fB--png-width\fR PX]
+.B py -u magnify_pane_v3.py
+.I --in ARTIFACT.(svg|png) --out DIR
+[\fB--name\fR BASE] [\fB--auto-fit\fR | \fB--no-auto-fit\fR] [\fB--boost\fR N]
+[\fB--init-scale\fR S] [\fB--render-png\fR] [\fB--png-width\fR PX]
 .SH DESCRIPTION
-Copies a 2×2 pane SVG/PNG into an output directory and generates a self-contained HTML viewer that supports smooth zoom (mouse wheel, zoom buttons) and pan (click-drag). This is intended for human inspection of high-density QR mosaics.
+Copies an SVG/PNG slide artifact into an output directory and generates a self-contained HTML viewer that supports smooth zoom (mouse wheel / buttons) and pan (click-drag). Version 3 adds auto-fit-on-load so physically sized nanometer-scale SVGs become visible immediately on a normal screen.
+.SH AUTO-FIT AND BOOST
+When auto-fit is enabled (default), the viewer scales the image to fit the current browser window and centers it. Use \fB--boost\fR to multiply that fit scale so the view starts "zoomed in" (useful for 2×2 panes). If auto-fit is disabled, \fB--init-scale\fR is used instead.
 .SH OPTIONS
 .TP
 .B --in PATH
-Input pane file (SVG or PNG).
+Input artifact file (SVG or PNG).
 .TP
 .B --out DIR
 Output directory for the copied asset and generated viewer HTML.
 .TP
 .B --name BASE
-Optional base name for outputs (default: input stem).
+Optional base name for outputs (extension optional).
+.TP
+.B --auto-fit
+Auto-fit the image to the window on load (default: enabled).
+.TP
+.B --no-auto-fit
+Disable auto-fit; use --init-scale instead.
+.TP
+.B --boost N
+Multiply the auto-fit scale by N (default: 1.0). Try 4–10 for 2×2 panes.
 .TP
 .B --init-scale S
-Initial zoom scale in the viewer (default: 2.0).
+Initial scale if --no-auto-fit (default: 2.0).
 .TP
 .B --render-png
 If input is SVG, also render a large PNG using cairosvg (optional).
@@ -36,10 +48,16 @@ Writes the following into --out:
 (optional) <base>_render.png (if --render-png and cairosvg available)
 .SH EXAMPLES
 .nf
-py -u magnify_pane.py --in Z:\\slide_out\\panes\\slide_00001_pane_00000001.svg --out Z:\\slide_out\\panes_view --init-scale 4
-py -u magnify_pane.py --in ./panes/pane.svg --out ./view --render-png --png-width 12000
+# View a 2×2 pane (recommended)
+py -u magnify_pane_v3.py --in .\\panes\\slide_00001_2x2_00000001.svg --out .\\view --boost 6
+
+# View a full slide (you will still need to zoom; panes are better)
+py -u magnify_pane_v3.py --in .\\slide\\slide_00001.svg --out .\\view
+
+# Render SVG to PNG for faster browser display (requires cairosvg)
+py -u magnify_pane_v3.py --in pane.svg --out view --render-png --png-width 4096
 .fi
 .SH NOTES
-If --render-png is used, cairosvg must be installed. On some Windows systems, Cairo runtime dependencies may also be required.
+Whole slides are designed for lithography writers and machine decode. For human inspection, use slice_slide_2x2_v3.py to create 2×2 panes and magnify those.
 .SH SEE ALSO
-slice_slide_2x2_v2.py(1), create_slide_qrfs_v3.py(1)
+slice_slide_2x2_v3.py(1), create_slide_qrfs_v3.py(1), rebuild_from_slide_v3.py(1)
